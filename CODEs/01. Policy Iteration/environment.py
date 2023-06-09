@@ -1,4 +1,4 @@
-import tkinter as tk
+import tkinter as tk # tkinter 설치 필요
 from tkinter import Button
 import time
 import numpy as np

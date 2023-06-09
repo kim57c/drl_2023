@@ -1,4 +1,4 @@
-import tkinter as tk
+import tkinter as tk # tkinter 설치 필요
 import time
 import numpy as np
 import random
