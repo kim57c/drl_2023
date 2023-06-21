@@ -11,14 +11,15 @@ class Agent:
     
     def __init__(self):
         
-        self.learning_rate = 0.1
-        self.discount_factor = 0.9
-        self.epsilon = 0.1
+        self.learning_rate = 0.1 # 학습률
+        self.discount_factor = 0.9 # 할인율 
+        self.epsilon = 0.1 # 입실론
 
         self.reset()
         
         
     def reset (self):
+         # 가치함수 테이블 초기화
         self.value_table = {}
         
         
@@ -27,7 +28,7 @@ class Agent:
         done = False
         
         state = self.environment.reset()
-        action = self.get_action(state)
+        # action = self.get_action(state)
         
         # 에피소드가 종료될 때까지 
         while not done:
