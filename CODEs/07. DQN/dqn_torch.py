@@ -208,7 +208,7 @@ def optimize_model():
         next_q_values[non_final_mask] = nsv.max(1)[0]
     
     # 새로운 Q-벨류 = 보상 + 할인율 * 다음 Q-벨류
-    expected_q_values = reward_batch+ GAMMA * next_q_values
+    expected_q_values = reward_batch + GAMMA * next_q_values
 
     optimize(q_values, expected_q_values)
     

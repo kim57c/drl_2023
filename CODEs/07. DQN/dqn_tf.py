@@ -165,11 +165,7 @@ def optimize_model():
     # shape(batch.next_state)=128,1,4
     res = [i for i in range(len(batch.next_state)) if batch.next_state[i] != None]
 
-    # m = map(lambda s: s is not None, batch.next_state)
-    # t = tuple(m)
     non_final_mask = tf.convert_to_tensor(res,dtype=tf.int32)
-    # non_final_mask = tf.expand_dims(tuple(map(lambda s: s is not None, batch.next_state),dtype=tf.bool),0)
-    
     # non_final_mask.shape=128
     
     # batch.next_state = 128, 1, 4
@@ -201,6 +197,7 @@ def optimize_model():
     
     # 새로운 Q-벨류 = 보상 + 할인율 * 다음 Q-벨류
     expected_q_values = reward_batch + GAMMA * next_q_values
+    
     expected_q_values = tf.expand_dims(expected_q_values,1)
     optimize ( state_batch, action_batch, expected_q_values )
 
