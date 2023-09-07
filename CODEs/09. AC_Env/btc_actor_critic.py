@@ -1,12 +1,14 @@
 
 ######################################################################
 
-import gym
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
+
+from btc_krw_env import BtcEnv
 
 ######################################################################
 
@@ -16,36 +18,74 @@ n_rollout = 10 # 배치크기
 
 ######################################################################
 
+clear_console = lambda: os.system('cls' if os.name in ('nt', 'dos') else 'clear')
+
+
+class style():
+    BLACK = '\033[30m'
+    RED = '\033[31m'
+    GREEN = '\033[32m'
+    YELLOW = '\033[33m'
+    BLUE = '\033[34m'
+    MAGENTA = '\033[35m'
+    CYAN = '\033[36m'
+    WHITE = '\033[37m'
+    UNDERLINE = '\033[4m'
+    RESET = '\033[0m'
+
+
 class ActorCritic(nn.Module):
     
     def __init__(self):
         super(ActorCritic, self).__init__()
         self.data = []
         
-        self.fc1 = nn.Linear(4,256)
+        input_size = 24
         
-        # 액션의 확률을 위한 출력 
-        self.fc_pi = nn.Linear(256,2)
+        nets = [4, 2]
         
-        # 가치함수를 위한 출력
-        self.fc_v = nn.Linear(256,1)
+        s = input_size
+        self.layers = nn.ModuleList ()
+        
+        for net in nets:
+            size = round(input_size*net)
+            self.layers.append(nn.Linear(s, size))
+            s = size
+        
+        # 아웃풋  설정 
+        self.fc_pi = nn.Linear(s, 2)
+        self.fc_v  = nn.Linear(s, 1) 
         
         # 신경망의 최적화기 정의
-        self.optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        self.optimizer = optim.NAdam(self.parameters(), lr=learning_rate)
+        
         
     def pi(self, x, softmax_dim=0):
-        x = F.relu(self.fc1(x))
+        
+        for _, layer in enumerate(self.layers):
+            x = F.normalize(x, dim=len(x.shape)-1)
+            x = F.relu(layer(x))
+        
         x = self.fc_pi(x)
         prob = F.softmax(x, dim=softmax_dim)
+            
         return prob
     
+    
     def v(self, x):
-        x = F.relu(self.fc1(x))
+        
+        for _, layer in enumerate(self.layers):
+            x = F.normalize(x, dim=len(x.shape)-1)
+            x = F.relu(layer(x))
+
         v = self.fc_v(x)
+      
         return v 
+    
     
     def put_data(self, transition):
         self.data.append(transition)
+    
     
     # 배치 작업을 위해 데이터들을 텐서화 한다.
     def make_batch(self):
@@ -94,41 +134,60 @@ class ActorCritic(nn.Module):
         
         
 ######################################################################
+
+def print_log(n_epi, env):
+    
+    cash, btc = env.assets()
+    assets = cash+btc
+    
+    print(f"에피소드:[{style.BLUE}{n_epi}{style.RESET}],", end=" ")
+    print(f"시작자산:[{style.CYAN}{format(round(env.seed_money),',')}{style.RESET}],", end=" ")
+    print(f"현재자산:[{style.YELLOW}{format(round(assets),',')}{style.RESET}],", end=" ")
+    
+    rate = assets/10000*100
+    rate = rate-100
+    
+    if rate>0 :
+        print(f'{style.GREEN}(▲+{rate:.1f}%){style.RESET}', end='')
+    else :
+        print(f'{style.RED}(▼{rate:.1f}%){style.RESET}', end='')
+        
+    print(f'')
+        
+    
         
 def main():
     
-    # env = gym.make('CartPole-v1', render_mode="human")
-    env = gym.make('CartPole-v1')
+    clear_console()
+    
+    env = BtcEnv()
     
     model = ActorCritic()
-    print_interval = 20 
-    score = 0.0
     
-    for n_epi in range(10000):
+    
+    for n_epi in range(100):
         done = False
-        s, _ = env.reset()
+        s = env.reset()
         
         while not done :
             for _ in range(n_rollout):
-                prob = model.pi(torch.from_numpy(s).float())
+                
+                prob = model.pi(torch.tensor(s).float())
                 m = Categorical(prob)
                 a = m.sample().item()
                 
-                s_prime, r, done, truncated, _ = env.step(a)
+                s_prime, r, done = env.step(a)
                 model.put_data((s, a, r, s_prime, done))
                 
                 s = s_prime
-                score += r
                 
-                if done or truncated:
+                if done :
                     break
                 
             model.train_net()
-            
-        if n_epi%print_interval==0 and n_epi!=0:
-            print(f"Episode :{n_epi}, Avg score : { score/print_interval:.1f}")
-            score = 0.0
-    env.close()
+        
+        print_log (n_epi, env)
+        
     
     
 if __name__ == '__main__':
