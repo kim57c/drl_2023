@@ -86,7 +86,8 @@ class ActorCritic(nn.Module):
         pi_a = pi.gather(1, a)
         
         # 두개의 함수를 하나의 로스로 모두 학습하기 위해 앞쪽은 파이(Policy)로스, 뒤쪽은 V(Value Function)로스
-        loss = -torch.log(pi_a) * delta.detach() + F.smooth_l1_loss ( self.v(s), td_target.detach() )
+        loss = -torch.log(pi_a) * delta.detach() + \
+            F.smooth_l1_loss ( self.v(s), td_target.detach() )
         
         self.optimizer.zero_grad()
         loss.mean().backward()
@@ -104,7 +105,7 @@ def main():
     print_interval = 20 
     score = 0.0
     
-    for n_epi in range(10000):
+    for n_epi in range(1000):
         done = False
         s, _ = env.reset()
         
