@@ -15,8 +15,8 @@ learning_rate = 0.0005 # 학습률
 gamma         = 0.98 # 할인률
 lmbda         = 0.95 # 람다
 eps_clip      = 0.1 # 클립
-K_epoch       = 3 # 에포크
-T_horizon     = 20 # 
+K_epoch       = 3 # 하나의 배치 당 훈련 에포크 수
+T_horizon     = 20 # 배치 단위 
 
 #######################################################################
 
@@ -70,6 +70,7 @@ class Ppo(nn.Module):
 
         for i in range(K_epoch): # K_epoch 만큼 수행
             
+            # A(t)=Q(t)-V(t), Q(t)=r(t)+감마(할인율)*V(st+1)
             td_target = r + gamma * self.v(s_prime) * done_mask
             delta = td_target - self.v(s)
             delta = delta.detach().numpy()
@@ -77,7 +78,8 @@ class Ppo(nn.Module):
             advantage_lst = []
             advantage = 0.0
             for delta_t in delta[::-1]:
-                advantage = gamma * lmbda * advantage + delta_t[0]
+                advantage = lmbda * advantage + delta_t[0]
+                # advantage = gamma * lmbda * advantage + delta_t[0]
                 advantage_lst.append([advantage])
             advantage_lst.reverse()
             advantage = torch.tensor(advantage_lst, dtype=torch.float)
@@ -125,6 +127,9 @@ def main():
                 model.put_data((s, a, r/100.0, s_prime, prob[a].item(), done))
                 s = s_prime
 
+                # if score > 5000  :
+                #     print(score, end=' ' )
+                
                 score += r
                 if done:
                     break
